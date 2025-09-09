@@ -13,6 +13,7 @@ import os
 # Import required libraries
 import cv2
 import fitz  # PyMuPDF
+import ezdxf
 
 # Set availability flags
 HAS_OPENCV = True
@@ -590,6 +591,43 @@ def build_handwriting_strict_mask_enhanced(image_bgr: np.ndarray, gray_rot: np.n
 	except Exception:
 		return np.zeros(image_bgr.shape[:2], dtype=np.uint8)
 
+# DXF 파일 생성 함수
+def create_dxf_file(lines: List[Dict[str, Any]], filename: str, scale_factor: float = 1.0) -> bytes:
+	"""라인 데이터를 DXF 파일로 변환"""
+	try:
+		# DXF 문서 생성
+		doc = ezdxf.new('R2010')
+		msp = doc.modelspace()
+		
+		# 라인을 DXF에 추가
+		for line in lines:
+			x0 = float(line["x0"]) * scale_factor
+			y0 = float(line["y0"]) * scale_factor 
+			x1 = float(line["x1"]) * scale_factor
+			y1 = float(line["y1"]) * scale_factor
+			
+			# Y좌표 뒤집기 (이미지 좌표계 -> CAD 좌표계)
+			# 이미지는 상단이 0, CAD는 하단이 0이므로
+			# 필요시 이미지 높이값으로 뒤집을 수 있음
+			msp.add_line((x0, -y0), (x1, -y1))
+		
+		# 메모리에서 직접 DXF 생성
+		import io
+		from io import StringIO
+		
+		# DXF를 StringIO로 저장
+		dxf_stream = StringIO()
+		doc.write(dxf_stream)
+		dxf_content = dxf_stream.getvalue()
+		dxf_stream.close()
+		
+		# 문자열을 바이트로 변환
+		return dxf_content.encode('utf-8')
+			
+	except Exception as e:
+		st.error(f"DXF 파일 생성 중 오류: {str(e)}")
+		return b""
+
 # 검출 함수
 
 def detect_lsd(gray_or_bin: np.ndarray) -> List[Dict[str, Any]]:
@@ -996,14 +1034,25 @@ try:
     # 상단 좌: 원본
     with top_cols[0]:
         st.markdown("**📄 원본 이미지**")
-        st.image(np.array(image), channels="RGB", use_container_width=True)
+        st.image(np.array(image), channels="RGB", use_column_width=True)
         st.caption("원본 PDF/이미지")
     
     # 상단 우: 원본 라인추출
     with top_cols[1]:
         st.markdown("**🔍 원본 라인추출**")
-        st.image(line_only, channels="RGB", use_container_width=True)
+        st.image(line_only, channels="RGB", use_column_width=True)
         st.caption(f"{len(lines)}개 라인 검출 · {algo.upper()}")
+        
+        # DXF 다운로드 버튼
+        if len(lines) > 0:
+            dxf_data = create_dxf_file(lines, f"original_lines_{algo}.dxf")
+            if dxf_data:
+                st.download_button(
+                    label="📥 원본 라인 DXF 다운로드",
+                    data=dxf_data,
+                    file_name=f"original_lines_{algo}.dxf",
+                    mime="application/dxf"
+                )
     
     # 하단 좌: 손글씨 제거
     with bottom_cols[0]:
@@ -1011,18 +1060,29 @@ try:
         if show_mask_debug:
             # 마스크 자체를 표시
             mask_display = np.stack([hand_mask, hand_mask, hand_mask], axis=-1)
-            st.image(mask_display, channels="RGB", use_container_width=True)
+            st.image(mask_display, channels="RGB", use_column_width=True)
             st.caption(f"손글씨 마스크 · {selected_name}")
         else:
             # 손글씨 제거된 이미지 표시
-            st.image(img_hwless, channels="RGB", use_container_width=True)
+            st.image(img_hwless, channels="RGB", use_column_width=True)
             st.caption(f"손글씨 제거됨 · {selected_name}")
     
     # 하단 우: 손글씨 제거 후 라인추출
     with bottom_cols[1]:
         st.markdown("**⚡ 손글씨 제거 후 라인추출**")
-        st.image(pl_img, channels="RGB", use_container_width=True)
+        st.image(pl_img, channels="RGB", use_column_width=True)
         st.caption(f"{len(pl_lines)}개 라인 검출 · 정제됨")
+        
+        # DXF 다운로드 버튼
+        if len(pl_lines) > 0:
+            dxf_data_clean = create_dxf_file(pl_lines, f"handwriting_removed_lines_{algo}.dxf")
+            if dxf_data_clean:
+                st.download_button(
+                    label="📥 정제된 라인 DXF 다운로드",
+                    data=dxf_data_clean,
+                    file_name=f"handwriting_removed_lines_{algo}.dxf",
+                    mime="application/dxf"
+                )
 
 except Exception as e:
     # 에러 시 기본 2열 레이아웃으로 폴백
@@ -1034,6 +1094,18 @@ except Exception as e:
     with top_cols[1]:
         st.markdown("**🔍 라인 추출**")
         st.image(line_only, channels="RGB")
+        st.caption(f"{len(lines)}개 라인 검출 · {algo.upper()}")
+        
+        # DXF 다운로드 버튼
+        if len(lines) > 0:
+            dxf_data = create_dxf_file(lines, f"lines_{algo}.dxf")
+            if dxf_data:
+                st.download_button(
+                    label="📥 라인 DXF 다운로드",
+                    data=dxf_data,
+                    file_name=f"lines_{algo}.dxf",
+                    mime="application/dxf"
+                )
 
 # 손글씨/인쇄문자 나란히 보기 섹션 제거됨 (오류 때문에)
 
