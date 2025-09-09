@@ -1,0 +1,21 @@
+  # Python
+  __pycache__/
+  *.pyc
+  .venv/
+
+  # Output files (주요 용량 절약)
+  outputs/
+  *.png
+  *.jpg
+  *.pdf
+  *.json
+
+  # IDE
+  .vscode/
+  .idea/
+
+  # Test files
+  performance_test.py
+  과업지시서*
+  샘플도면.pdf
+  풀도면.pdf
