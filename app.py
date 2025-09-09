@@ -996,13 +996,13 @@ try:
     # 상단 좌: 원본
     with top_cols[0]:
         st.markdown("**📄 원본 이미지**")
-        st.image(np.array(image), channels="RGB", use_container_width=True)
+        st.image(np.array(image), channels="RGB", use_column_width=True)
         st.caption("원본 PDF/이미지")
     
     # 상단 우: 원본 라인추출
     with top_cols[1]:
         st.markdown("**🔍 원본 라인추출**")
-        st.image(line_only, channels="RGB", use_container_width=True)
+        st.image(line_only, channels="RGB", use_column_width=True)
         st.caption(f"{len(lines)}개 라인 검출 · {algo.upper()}")
     
     # 하단 좌: 손글씨 제거
@@ -1011,17 +1011,17 @@ try:
         if show_mask_debug:
             # 마스크 자체를 표시
             mask_display = np.stack([hand_mask, hand_mask, hand_mask], axis=-1)
-            st.image(mask_display, channels="RGB", use_container_width=True)
+            st.image(mask_display, channels="RGB", use_column_width=True)
             st.caption(f"손글씨 마스크 · {selected_name}")
         else:
             # 손글씨 제거된 이미지 표시
-            st.image(img_hwless, channels="RGB", use_container_width=True)
+            st.image(img_hwless, channels="RGB", use_column_width=True)
             st.caption(f"손글씨 제거됨 · {selected_name}")
     
     # 하단 우: 손글씨 제거 후 라인추출
     with bottom_cols[1]:
         st.markdown("**⚡ 손글씨 제거 후 라인추출**")
-        st.image(pl_img, channels="RGB", use_container_width=True)
+        st.image(pl_img, channels="RGB", use_column_width=True)
         st.caption(f"{len(pl_lines)}개 라인 검출 · 정제됨")
 
 except Exception as e:
